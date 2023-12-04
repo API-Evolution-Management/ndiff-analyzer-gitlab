@@ -1,0 +1,60 @@
+stages: # Create two stages for analysis
+  - ndiff-analysis
+  - openapi-analysis
+
+.default_rules: # rules can be adapted to run analysis on different branches
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH # only run jobs on the default branch (main)
+
+ndiff-head: # runs ndiff on the current commit (HEAD)
+  stage: ndiff-analysis
+  rules: 
+    - !reference [.default_rules, rules]
+  image: 
+    name: clemi2806/ndiff:v1.1
+    entrypoint: [""]
+  script:
+    - dotnet /app/NDiff.dll -s $SEARCH_DIR -n diff_head -f 0 -d ./
+  artifacts:
+    paths:
+      - "diff_head.json"
+  
+ndiff-prev: # runs ndiff on the previous commit
+  stage: ndiff-analysis
+  rules: 
+    - !reference [.default_rules, rules]
+  image: 
+    name: clemi2806/ndiff:v1.1
+    entrypoint: [""]
+  script:
+    - git checkout HEAD^
+    - dotnet /app/NDiff.dll -s $SEARCH_DIR -n diff_prev -f 0 -d ./
+  artifacts:
+    paths:
+      - "diff_prev.json"
+
+openapi-diff: # analyzes both ndiff-outputs and sends result to the notifier API
+  stage: openapi-analysis
+  rules: 
+    - !reference [.default_rules, rules]
+  dependencies:
+    - ndiff-head
+    - ndiff-prev
+  image: 
+    name: openapitools/openapi-diff
+    entrypoint: [""]
+  before_script:
+    - apt-get update
+    - apt-get install -y curl
+  script:
+    - CHANGED=$(java -jar /app/openapi-diff.jar ./diff_prev.json ./diff_head.json --state --html ./diff.html)
+    - >
+      if [ "$CHANGED" == "no_changes" ]; then
+        echo "No changes to report"
+      else
+        echo "Reporting changes to users"
+        curl --location --request POST "$NOTIFIER_API" --header "Content-Type: text/html" -d @./diff.html
+      fi
+  artifacts:
+    paths:
+      - "diff.html"
