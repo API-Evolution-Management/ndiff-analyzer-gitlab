@@ -37,9 +37,6 @@ openapi-diff: # analyzes both ndiff-outputs and sends result to the notifier API
   stage: openapi-analysis
   rules: 
     - !reference [.default_rules, rules]
-  dependencies:
-    - ndiff-head
-    - ndiff-prev
   image: 
     name: openapitools/openapi-diff
     entrypoint: [""]
