@@ -1,6 +1,7 @@
 stages: # Create two stages for analysis
   - ndiff-analysis
   - openapi-analysis
+  - publish-changes
 
 .default_rules: # rules can be adapted to run analysis on different branches
   rules:
@@ -40,18 +41,23 @@ openapi-diff: # analyzes both ndiff-outputs and sends result to the notifier API
   image: 
     name: openapitools/openapi-diff
     entrypoint: [""]
-  before_script:
-    - apt-get update
-    - apt-get install -y curl
   script:
     - CHANGED=$(java -jar /app/openapi-diff.jar ./diff_prev.json ./diff_head.json --state --html ./diff.html)
     - >
       if [ "$CHANGED" == "no_changes" ]; then
         echo "No changes to report"
-      else
-        echo "Reporting changes to users"
-        curl --location --request POST "$NOTIFIER_API" --header "Content-Type: text/html" -d @./diff.html
+        rm diff.html
       fi
   artifacts:
     paths:
       - "diff.html"
+
+send-changes:
+  stage: publish-changes
+  rules:
+    - !reference [.default_rules, rules]
+  script:
+    - >
+      if [ -f "diff.html" ]; then
+        curl --fail --location --request POST "$NOTIFIER_API?branch=$CI_COMMIT_BRANCH&address=$CI_SERVER_HOST/$CI_PROJECT_PATH" --header "Content-Type: text/html" -d @./diff.html
+      fi
