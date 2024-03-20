@@ -1,6 +1,9 @@
 stages:
     - ndiff-client
 
+variables:
+    NDIFF_DEPENDENCY_FILE: "Dependency"
+
 .ndiff_rules_service:
     rules:
         - if: $CI_PIPELINE_SOURCE == "trigger"
@@ -10,12 +13,11 @@ ndiff-client-update:
     image:
         name: clemi2806/ndiff-gitlab-client
         entrypoint: [""] 
-    only:
-        changes:
-            - "Dependency"
-    except:
-        refs:
-            - triggers
+    rules:
+        - if: $CI_PIPELINE_SOURCE == "trigger"
+          when: never
+        - changes: 
+            - "$NDIFF_DEPENDENCY_FILE"
     script: java -jar /app/ndiff-gitlab-client-1.0.jar ndiff-client update
 
 ndiff-client-service:
