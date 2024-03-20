@@ -56,8 +56,10 @@ send-changes:
   stage: publish-changes
   rules:
     - !reference [.default_rules, rules]
+  variables:
+    ADDRESS: "$CI_SERVER_HOST/$CI_PROJECT_PATH"
   script:
     - >
       if [ -f "diff.html" ]; then
-        curl --fail --location --request POST "$NOTIFIER_API?branch=$CI_COMMIT_BRANCH&address=$CI_SERVER_HOST/$CI_PROJECT_PATH" --header "Content-Type: text/html" -d @./diff.html
+        curl --fail --location --request POST "$NOTIFIER_API?branch=$CI_COMMIT_BRANCH&address=$ADDRESS" --header "Content-Type: text/html" -d @./diff.html
       fi
