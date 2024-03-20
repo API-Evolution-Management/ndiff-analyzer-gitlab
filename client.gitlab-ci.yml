@@ -1,0 +1,28 @@
+stages:
+    - ndiff-client
+
+.ndiff_rules_service:
+    rules:
+        - if: $CI_PIPELINE_SOURCE == "trigger"
+
+ndiff-client-update:
+    stage: ndiff-client
+    image:
+        name: clemi2806/ndiff-gitlab-client
+        entrypoint: [""] 
+    only:
+        changes:
+            - "Dependency"
+    except:
+        refs:
+            - triggers
+    script: java -jar /app/ndiff-gitlab-client-1.0.jar ndiff-client update
+
+ndiff-client-service:
+    stage: ndiff-client
+    image: 
+        name: clemi2806/ndiff-gitlab-client
+        entrypoint: [""]
+    rules:
+        - !reference [.ndiff_rules_service, rules]
+    script: java -jar /app/ndiff-gitlab-client-1.0.jar ndiff-client run -gt
